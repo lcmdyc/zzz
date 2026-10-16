@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>皂皂打卡</title>
-<link rel="stylesheet" href="style.css?v=2">
+<title>打卡</title>
+<link rel="stylesheet" href="style.css?v=3">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 </head>
 <body>
@@ -12,48 +12,16 @@
 <div id="modal"><div class="box" id="mbox"></div></div>
 
 <div class="wrap">
-  <h1>🐶 皂皂打卡</h1>
+  <h1>📋 打卡</h1>
   <p class="sub" id="today"></p>
+  <div class="tabs" id="tabs"></div>
 
   <div class="card" id="remcard">
-    <h2>💊 疫苗 / 驱虫到期提醒</h2>
+    <h2>💊 到期提醒</h2>
     <div id="rem"></div>
   </div>
 
-  <div class="card" id="crate">
-    <h2>🏠 笼子计时</h2>
-    <div class="cs">
-      <div><div class="st" id="cst"></div><div class="since" id="csince"></div></div>
-      <div class="tm" id="ctm">--:--:--</div>
-    </div>
-    <div class="since" id="cwarn" style="margin-top:4px"></div>
-    <div class="bar"><i id="cbar"></i></div>
-    <div class="since" id="cgoal" style="margin-top:4px"></div>
-    <div class="cstats">
-      <div><b id="s1">-</b><span class="k">今日出笼累计</span></div>
-      <div><b id="s2">-</b><span class="k">今日出笼次数</span></div>
-      <div><b id="s3">-</b><span class="k">平均出笼前笼内</span></div>
-      <div><b id="s4">-</b><span class="k">最长出笼前笼内</span></div>
-    </div>
-    <div style="margin-top:10px;font-size:13px;font-weight:600;color:#8a5a2b">今日每次出笼前，笼内待了多久：</div>
-    <div id="gaplist" style="margin-top:4px"></div>
-    <button class="big" id="ctoggle"></button>
-    <div class="set">
-      <span>每日出笼目标 <input id="goal" type="number" step="0.5" min="0"> 小时（建议6~7h含遛狗时长）</span>
-      <span>间隔 ≤ <input id="gg" type="number" step="0.5" min="0"> 小时为🟢</span>
-      <span>≥ <input id="gr" type="number" step="0.5" min="0"> 小时为🔴</span>
-    </div>
-  </div>
-
-  <div class="card" id="walkc">
-    <h2>🚶 遛狗计时</h2>
-    <div class="cs">
-      <div><div class="st" id="wst"></div><div class="since" id="wsince"></div></div>
-      <div class="tm" id="wtm">--:--:--</div>
-    </div>
-    <div class="since" id="wtoday" style="margin-top:4px"></div>
-    <button class="big" id="wtoggle"></button>
-  </div>
+  <div id="timers"></div>
 
   <div class="card">
     <h2>今日（点卡片可手动记录）</h2>
@@ -61,11 +29,7 @@
     <div class="row" style="justify-content:flex-start"><button class="g s" id="backfill">⏱ 补录（忘扫或补记过去的事）</button></div>
   </div>
 
-  <div class="card">
-    <h2>💩 大便记录与关联</h2>
-    <div id="poopsum" class="tip" style="margin:0 0 6px"></div>
-    <div id="poops"></div>
-  </div>
+  <div id="states"></div>
 
   <div class="card">
     <div class="nav">
@@ -74,7 +38,7 @@
       <button class="g s" id="next">下一周 ▶</button>
     </div>
     <div class="scroll"><table id="week"></table></div>
-    <p class="tip">出笼时长按自然日 0 点切分。间隔颜色按你设置的阈值：🟢短、🟡中、🔴长。</p>
+    <p class="tip">计时项按自然日 0 点切分。间隔颜色按你在编辑器里设置的阈值：🟢短、🟡中、🔴长。</p>
   </div>
 
   <div class="card">
@@ -85,12 +49,7 @@
       </select>
     </div>
     <p class="tip" id="chartMsg"></p>
-    <div class="chartbox"><h3>每日出笼时长（小时，虚线=目标）</h3><canvas id="ch1"></canvas></div>
-    <div class="chartbox"><h3>每次出笼前的笼内时长（小时）</h3><canvas id="ch2"></canvas></div>
-    <div class="chartbox"><h3>每日喂食量（克）</h3><canvas id="ch3"></canvas></div>
-    <div class="chartbox"><h3>每日遛狗时长（分钟）</h3><canvas id="ch4"></canvas></div>
-    <div class="chartbox"><h3>体重（kg）</h3><canvas id="ch5"></canvas></div>
-    <div class="chartbox"><h3>大便状态日历（每格一天，颜色=当天最差状态）</h3><div class="strip" id="strip"></div></div>
+    <div id="chartHost"></div>
   </div>
 
   <div class="card noprint">
@@ -101,7 +60,7 @@
       <input type="month" id="rmonth" style="border:1px solid #ddd;border-radius:8px;padding:6px">
       <button id="rm">生成月报</button>
     </div>
-    <p class="tip">月报生成后，可下载报告和原始 CSV；已结束的月份可在下载后选择删除原始数据，释放云端空间（非必须）。</p>
+    <p class="tip">报告只统计当前档案。已结束的月份可在下载后选择删除原始数据，释放云端空间（非必须）。</p>
   </div>
 
   <div class="card">
@@ -112,7 +71,7 @@
   <div class="card noprint">
     <details>
       <summary>🏷️ NFC 贴片链接（写入贴片用）</summary>
-      <p class="tip" style="margin-bottom:6px">发布到 GitHub Pages 后复制到的才是正式地址。笼子、遛狗都推荐用「切换」一张贴片。</p>
+      <p class="tip" style="margin-bottom:6px">发布到 GitHub Pages 后复制到的才是正式地址。计时项推荐用「切换」一张贴片。所有档案的链接都在这里。</p>
       <div id="urls"></div>
     </details>
     <details style="margin-top:10px">
@@ -146,12 +105,14 @@
 </div>
 
 <!-- 加载顺序不能改 -->
-<script src="js/config.js?v=1"></script>
-<script src="js/core.js?v=1"></script>
-<script src="js/ui.js?v=1"></script>
-<script src="js/charts.js?v=1"></script>
-<script src="js/report.js?v=1"></script>
-<script src="js/sync.js?v=1"></script>
-<script src="js/main.js?v=1"></script>
+<script src="js/config.js?v=2"></script>
+<script src="js/profiles.js?v=2"></script>
+<script src="js/core.js?v=2"></script>
+<script src="js/ui.js?v=2"></script>
+<script src="js/editor.js?v=2"></script>
+<script src="js/charts.js?v=2"></script>
+<script src="js/report.js?v=2"></script>
+<script src="js/sync.js?v=2"></script>
+<script src="js/main.js?v=2"></script>
 </body>
 </html>
