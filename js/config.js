@@ -10,7 +10,6 @@ const ACTIONS=[
   {id:"meal",  name:"喂食",     emoji:"🍽️", type:"meal", target:2, cat:"饮食", grams:[30,40,50,60]},
   {id:"snack", name:"零食",     emoji:"🦴", type:"tap", cat:"饮食"},
   {id:"newfood",name:"换粮/新食物",emoji:"🆕", type:"note", cat:"饮食"},
-  {id:"wipe",  name:"回家擦洗", emoji:"🧼", type:"tap", target:1, cat:"日常"},
   {id:"play",  name:"笼外互动/训练", emoji:"🎾", type:"tap", target:1, cat:"运动"},
   {id:"brain", name:"脑力游戏", emoji:"🧠", type:"tap", target:1, cat:"运动"},
   {id:"night", name:"夜间短遛", emoji:"🌙", type:"tap", target:1, cat:"运动"},
