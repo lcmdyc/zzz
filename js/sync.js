@@ -1,4 +1,4 @@
-/* ====== Supabase 云同步（增量） ====== */
+/* ====== Supabase 云同步（增量 + 配置） ====== */
 const L=k=>localStorage.getItem(k)||"";
 let sess=JSON.parse(L("sb_sess")||"null"),syncing=false,again=false;
 const sbReady=()=>L("sb_url")&&L("sb_key")&&sess;
@@ -20,11 +20,41 @@ async function sbReq(path,opt={}){
   if(!r.ok)throw new Error("同步失败 "+r.status+" "+(await r.text()).slice(0,80));
   return r;
 }
+
+/* ---------- 配置同步：settings 表，以 updated_at 新者为准 ---------- */
+const CFG_KEY="p2_cfg",CFG_AT="p2_cfg_at";
+async function syncCfg(){
+  const raw=L(CFG_KEY);
+  let lts=+L(CFG_AT)||0;
+  const r=await sbReq(`settings?key=eq.${CFG_KEY}&select=value,updated_at`);
+  const rows=await r.json();
+  const remote=rows[0],rts=remote?Date.parse(remote.updated_at)||0:0;
+  if(remote&&rts>lts+1000){
+    // 云端更新：覆盖本机配置并重新加载页面
+    localStorage.setItem(CFG_KEY,JSON.stringify(remote.value));
+    localStorage.setItem(CFG_AT,String(rts));
+    location.reload();
+    return true;
+  }
+  if(raw&&(!remote||lts>rts+1000||(!lts&&!remote))){
+    if(!lts){lts=Date.now();localStorage.setItem(CFG_AT,String(lts));}
+    await sbReq("settings?on_conflict=key",{method:"POST",headers:{Prefer:"resolution=merge-duplicates,return=minimal"},
+      body:JSON.stringify({key:CFG_KEY,value:JSON.parse(raw),updated_at:new Date(lts).toISOString()})});
+  }
+  return false;
+}
+// 每次保存配置时打时间戳并触发同步（包一层，不改 profiles.js）
+if(typeof saveCfg==="function"){
+  const _saveCfg=saveCfg;
+  saveCfg=function(){const x=_saveCfg.apply(this,arguments);localStorage.setItem(CFG_AT,String(Date.now()));setTimeout(sync,300);return x;};
+}
+
 async function sync(){
   if(!sbReady())return;
   if(syncing){again=true;return;}
   syncing=true;setStat("同步中…");
   try{
+    if(await syncCfg()){syncing=false;return;}
     const hasBase=!!L("sb_synced");
     const synced=new Set(JSON.parse(L("sb_synced")||"[]"));
     const ids=new Set(log.map(e=>e.id));
