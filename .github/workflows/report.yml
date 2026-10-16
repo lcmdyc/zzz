@@ -1,0 +1,32 @@
+name: 皂皂定时报告
+
+on:
+  schedule:
+    - cron: "30 15 * * *"   # UTC 15:30 = 北京时间 23:30
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "测试用：强制发送哪些报告，如 daily,weekly,monthly,yearly"
+        required: false
+        default: ""
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Shanghai
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 生成并发送报告
+        run: node scripts/report.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          SB_EMAIL: ${{ secrets.SB_EMAIL }}
+          SB_PASSWORD: ${{ secrets.SB_PASSWORD }}
+          RESEND_KEY: ${{ secrets.RESEND_KEY }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+          FORCE: ${{ github.event.inputs.force }}
