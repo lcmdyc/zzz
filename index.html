@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>皂皂打卡</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:#f6f1ea;color:#3a3a3a;padding:14px;line-height:1.5}
+  .wrap{max-width:900px;margin:0 auto}
+  h1{text-align:center;font-size:24px;margin:6px 0 2px}
+  .sub{text-align:center;color:#888;font-size:13px;margin-bottom:12px}
+  .card{background:#fff;border-radius:14px;padding:14px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+  h2{font-size:17px;margin-bottom:10px;color:#8a5a2b}
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+  .a{border:1px solid #f0e4d2;border-radius:12px;padding:10px;background:#fffaf2;cursor:pointer;user-select:none}
+  .a:active{background:#fbe9cc}
+  .a .t{font-size:15px;font-weight:600}
+  .a .c{font-size:13px;color:#e0903a;margin-top:2px}
+  .a .l{font-size:12px;color:#999;margin-top:2px;min-height:18px}
+  .a.ok{background:#eef9ee;border-color:#cfe9cf}
+  .a.ok .c{color:#3c9a4a}
+  .scroll{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;min-width:560px}
+  th,td{border:1px solid #eee;padding:6px 4px;text-align:center;font-size:13px}
+  th{background:#fbf3e6;color:#8a5a2b}
+  td.n{text-align:left;white-space:nowrap}
+  td.g{background:#eef9ee;color:#3c9a4a;font-weight:700}
+  td.p{background:#fff6e6;color:#e0903a;font-weight:700}
+  .nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:14px}
+  button{border:none;border-radius:8px;padding:8px 14px;font-size:14px;cursor:pointer;background:#e0903a;color:#fff}
+  button.g{background:#999}
+  button.r{background:#c0463a}
+  button.s{padding:4px 10px;font-size:12px}
+  .log div{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f1f1f1;padding:6px 0;font-size:13px;gap:8px}
+  .log .m{color:#999;font-size:12px}
+  #toast{position:fixed;left:12px;right:12px;top:12px;max-width:600px;margin:auto;background:#2f7d3b;color:#fff;border-radius:12px;padding:14px;display:none;z-index:20;box-shadow:0 4px 16px rgba(0,0,0,.25);align-items:center;justify-content:space-between;gap:10px}
+  #toast.warn{background:#c77a1c}
+  #toast button{background:#fff;color:#333}
+  #modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:30;padding:16px}
+  #modal .box{background:#fff;border-radius:14px;padding:18px;width:100%;max-width:380px;max-height:90vh;overflow:auto}
+  #modal h3{margin-bottom:10px}
+  #modal input,#modal select{width:100%;border:1px solid #ddd;border-radius:8px;padding:10px;font-size:16px;margin:6px 0}
+  .opts{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0}
+  .opts button{background:#fbf3e6;color:#8a5a2b}
+  .opts button.sel{background:#e0903a;color:#fff}
+  .row{display:flex;gap:8px;justify-content:flex-end;margin-top:8px;flex-wrap:wrap}
+  details summary{cursor:pointer;font-weight:600;color:#8a5a2b;margin-bottom:8px}
+  .url{display:flex;gap:6px;margin:4px 0;align-items:center;font-size:12px}
+  .url b{min-width:90px}
+  .url input{flex:1;font-size:12px;border:1px solid #ddd;border-radius:6px;padding:4px;min-width:0}
+  .tip{font-size:12px;color:#888;margin-top:6px}
+  .cs{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .cs .st{font-size:18px;font-weight:700}
+  .cs .tm{font-size:30px;font-weight:700;font-variant-numeric:tabular-nums}
+  .cs .since{font-size:12px;color:#888}
+  .cstats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+  .cstats div{background:#f8f8f8;border-radius:10px;padding:8px;text-align:center}
+  .cstats b{display:block;font-size:17px;font-variant-numeric:tabular-nums}
+  .cstats span{font-size:11px;color:#888}
+  .bar{height:8px;background:#eee;border-radius:6px;overflow:hidden;margin-top:10px}
+  .bar i{display:block;height:100%;width:0;background:#3c9a4a}
+  .big{width:100%;padding:12px;font-size:16px;margin-top:10px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .chip{color:#fff;border-radius:999px;padding:3px 10px;font-size:12px}
+  .set{font-size:12px;color:#666;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .set input{width:52px;border:1px solid #ddd;border-radius:6px;padding:2px 4px}
+  .due{display:flex;flex-wrap:wrap;gap:8px}
+  .due div{border-radius:10px;padding:8px 12px;font-size:13px;color:#fff;cursor:pointer}
+  .charts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .cw h4{font-size:13px;color:#8a5a2b;margin-bottom:4px}
+  .cw div{position:relative;height:190px}
+  textarea#rtxt{width:100%;height:300px;border:1px solid #ddd;border-radius:8px;padding:8px;font-size:13px;margin-top:8px;font-family:inherit}
+  select.f{border:1px solid #ddd;border-radius:8px;padding:6px}
+  .cfgrow{display:flex;gap:6px;flex-wrap:wrap;align-items:center;border-bottom:1px solid #f1f1f1;padding:8px 0;font-size:12px;color:#666}
+  .cfgrow input:not([type=checkbox]),.cfgadd input,.cfgadd select{border:1px solid #ddd;border-radius:6px;padding:5px 7px;font-size:13px}
+  .cfgrow label{display:flex;align-items:center;gap:4px}
+  .cfgrow input[data-f=name]{width:120px}
+  .cfgrow input[data-f=opts],.cfgrow input[data-f=presets]{flex:1;min-width:160px}
+  .cfgadd{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;align-items:center}
+  @media(max-width:560px){.cstats{grid-template-columns:repeat(2,1fr)}.charts{grid-template-columns:1fr}}
+  @media print{.noprint{display:none}body{background:#fff}}
+</style>
+</head>
+<body>
+<div id="toast"><span id="tmsg"></span><button id="tundo">撤销</button></div>
+<div id="modal"><div class="box" id="mbox"></div></div>
+
+<div class="wrap">
+  <h1>🐶 皂皂打卡</h1>
+  <p class="sub" id="today"></p>
+
+  <div class="card" id="crate">
+    <h2>🏠 笼子计时</h2>
+    <div class="cs">
+      <div><div class="st" id="cst"></div><div class="since" id="csince"></div></div>
+      <div class="tm" id="ctm">--:--:--</div>
+    </div>
+    <div class="bar"><i id="cbar"></i></div>
+    <div class="since" id="cgoal" style="margin-top:4px"></div>
+    <div class="cstats">
+      <div><b id="s1">-</b><span>今日出笼累计</span></div>
+      <div><b id="s2">-</b><span>今日笼内累计</span></div>
+      <div><b id="s3">-</b><span>今日出笼次数</span></div>
+      <div><b id="s4">-</b><span>今日最长连续笼内</span></div>
+    </div>
+    <div class="since" style="margin-top:10px">最近每次出笼前，笼内待了多久（越红越久）：</div>
+    <div class="chips" id="chips"></div>
+    <button class="big" id="ctoggle"></button>
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <button class="g s" id="backfill">⏱ 补录忘扫的记录</button>
+      <span class="set">出笼目标<input id="goal" type="number" step="0.5" min="0">h　笼内 ≤<input id="glo" type="number" step="0.5" min="0">h 为绿，≥<input id="ghi" type="number" step="0.5" min="0">h 为红</span>
+    </div>
+  </div>
+
+  <div class="card" id="walkc">
+    <h2>🚶 遛狗计时</h2>
+    <div class="cs">
+      <div><div class="st" id="wst"></div><div class="since" id="wsince"></div></div>
+      <div class="tm" id="wtm" style="color:#3c9a4a">--:--:--</div>
+    </div>
+    <div class="bar"><i id="wbar"></i></div>
+    <div class="since" id="wgoal" style="margin-top:4px"></div>
+    <button class="big" id="wtoggle"></button>
+    <div class="row" style="justify-content:flex-end"><span class="set">每日遛狗目标<input id="wg" type="number" step="5" min="0">分钟</span></div>
+  </div>
+
+  <div class="card">
+    <h2>💉 驱虫 / 疫苗到期提醒</h2>
+    <div class="due" id="due"></div>
+    <p class="tip">点击某一项可修改周期天数。历史上做过的日期，用「补录」补上即可。</p>
+  </div>
+
+  <div class="card">
+    <h2>今日（点卡片也可手动记录）</h2>
+    <div class="cards" id="cards"></div>
+  </div>
+
+  <div class="card">
+    <div class="nav">
+      <button class="g s" id="prev">◀ 上一周</button>
+      <b id="wlabel"></b>
+      <button class="g s" id="next">下一周 ▶</button>
+    </div>
+    <div class="scroll"><table id="week"></table></div>
+    <p class="tip">绿色 = 达标；橙色 = 已记录未达标。出笼和遛狗时长按自然日 0 点切分，跨午夜的会自动拆到两天。</p>
+  </div>
+
+  <div class="card">
+    <div class="nav"><h2 style="margin:0">📈 趋势图</h2>
+      <select class="f" id="crange"><option value="7">近 7 天</option><option value="30" selected>近 30 天</option><option value="90">近 90 天</option></select></div>
+    <div class="charts">
+      <div class="cw"><h4>每日出笼时长（小时，虚线=目标）</h4><div><canvas id="ch1"></canvas></div></div>
+      <div class="cw"><h4>每日遛狗时长（分钟）</h4><div><canvas id="ch2"></canvas></div></div>
+      <div class="cw"><h4>每次出笼前的笼内间隔（小时）</h4><div><canvas id="ch3"></canvas></div></div>
+      <div class="cw"><h4>体重（kg）</h4><div><canvas id="ch4"></canvas></div></div>
+      <div class="cw"><h4>大便（正常 / 异常 次数）</h4><div><canvas id="ch5"></canvas></div></div>
+      <div class="cw"><h4>每日喂食量（g）</h4><div><canvas id="ch6"></canvas></div></div>
+      <div class="cw"><h4>异常事件次数</h4><div><canvas id="ch7"></canvas></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>最近记录</h2>
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="card noprint">
+    <details>
+      <summary>🏷️ 自定义标签</summary>
+      <p class="tip" style="margin:0 0 6px">可改名称、图标、每日目标，可隐藏或新增。大便/异常的选项用逗号分隔；大便的第一个选项视为「正常」。设置保存在本设备浏览器中。</p>
+      <div id="cfg"></div>
+      <div class="cfgadd">
+        <input id="newEmoji" placeholder="图标" style="width:56px" value="📌">
+        <input id="newName" placeholder="新标签名称，如：刷牙">
+        <select id="newType"><option value="tap">点按（次数）</option><option value="num">数值</option><option value="note">备注</option></select>
+        <button id="newAdd">＋ 添加标签</button>
+        <button class="g" id="cfgReset">恢复默认</button>
+      </div>
+    </details>
+    <details style="margin-top:10px">
+      <summary>📄 周报 / 月报</summary>
+      <div class="row" style="justify-content:flex-start;align-items:center">
+        <select class="f" id="rp"></select>
+        <button id="rgen">生成</button>
+        <button class="g" id="rcopy">复制</button>
+        <button class="g" id="rtxtdl">下载 TXT</button>
+        <button class="g" id="rcsv">下载本期 CSV</button>
+      </div>
+      <textarea id="rtxt" readonly placeholder="选择周期后点「生成」"></textarea>
+      <div class="row" style="justify-content:flex-start;margin-top:10px">
+        <button class="r" id="rdel">📦 导出并删除该月数据</button>
+      </div>
+      <p class="tip">仅历史月份可删除。会先下载 TXT 报告和 JSON 备份，再确认删除。体重、驱虫、疫苗记录会保留（数据量很小，且用于趋势和到期计算）。删除会同步到云端。</p>
+    </details>
+    <details style="margin-top:10px">
+      <summary>🏷️ NFC 贴片链接（写入贴片用）</summary>
+      <p class="tip" style="margin-bottom:6px">发布到 GitHub Pages 后，这里复制到的才是正式地址。</p>
+      <div id="urls"></div>
+    </details>
+    <details style="margin-top:10px">
+      <summary>☁️ 云同步（Supabase）</summary>
+      <div style="display:grid;gap:6px">
+        <input id="sbUrl" placeholder="Project URL，如 https://xxxx.supabase.co" style="border:1px solid #ddd;border-radius:8px;padding:8px">
+        <input id="sbKey" placeholder="anon public key" style="border:1px solid #ddd;border-radius:8px;padding:8px">
+        <input id="sbEmail" placeholder="登录邮箱" type="email" style="border:1px solid #ddd;border-radius:8px;padding:8px">
+        <input id="sbPw" placeholder="密码" type="password" style="border:1px solid #ddd;border-radius:8px;padding:8px">
+      </div>
+      <div class="row" style="justify-content:flex-start">
+        <button id="sbLogin">登录并同步</button>
+        <button class="g" id="sbSync">立即同步</button>
+        <button class="g" id="sbOut">退出登录</button>
+      </div>
+      <p class="tip" id="sbStat">未登录</p>
+    </details>
+    <details style="margin-top:10px">
+      <summary>💾 数据备份</summary>
+      <div class="row" style="justify-content:flex-start">
+        <button id="expCsv">导出全部 CSV</button>
+        <button id="expJson">导出备份 JSON</button>
+        <button class="g" id="impBtn">导入备份</button>
+        <input type="file" id="impFile" accept=".json" style="display:none">
+      </div>
+      <p style="margin-top:10px;font-size:13px">可选：Webhook 地址（每次记录时 POST 一条 JSON）</p>
+      <input id="hook" placeholder="https://..." style="width:100%;border:1px solid #ddd;border-radius:8px;padding:8px;margin-top:4px">
+      <div class="row"><button class="s" id="hookSave">保存</button></div>
+      <hr style="margin:12px 0;border:none;border-top:1px solid #eee">
+      <button class="g s" id="clearAll">清空所有数据</button>
+    </details>
+  </div>
+</div>
+
+<script>
+/* ====== 默认动作列表（可在页面「自定义标签」里改名/改目标/隐藏/新增）======
+   sys: 系统动作，计时逻辑依赖，不在设置里显示
+   type: tap | num | choice | note ; target: 每日目标次数 ; hide: 不显示
+   presets: 数值快捷按钮 ; cycle: 到期提醒默认周期（天） */
+const BASE=[
+  {id:"crate_out",name:"出笼",emoji:"🔓",type:"tap",cat:"笼子",hide:true,sys:true},
+  {id:"crate_in", name:"进笼",emoji:"🔒",type:"tap",cat:"笼子",hide:true,sys:true},
+  {id:"walk_out", name:"出门遛狗",emoji:"🚪",type:"tap",cat:"运动",hide:true,sys:true},
+  {id:"walk_in",  name:"遛狗回家",emoji:"🏠",type:"tap",cat:"运动",hide:true,sys:true},
+  {id:"walk",     name:"遛狗(旧记录)",emoji:"🚶",type:"tap",cat:"运动",hide:true,sys:true},
+  {id:"meal",  name:"喂食(g)", emoji:"🍽️", type:"num", presets:[30,40,50], target:2, cat:"饮食"},
+  {id:"snack", name:"零食",    emoji:"🦴", type:"tap", cat:"饮食"},
+  {id:"poop",  name:"大便",    emoji:"💩", type:"choice", opts:["正常","偏软","拉稀","偏硬","带血/黏液"], cat:"大便"},
+  {id:"abn",   name:"异常事件",emoji:"⚠️", type:"choice", opts:["发抖","喘气","呕吐","哼唧","顶手","咳嗽","其他"], cat:"异常"},
+  {id:"wake",  name:"起床放出/上厕所", emoji:"🌅", type:"tap", target:1, cat:"日常"},
+  {id:"play",  name:"笼外互动/训练", emoji:"🎾", type:"tap", target:1, cat:"运动"},
+  {id:"brain", name:"脑力游戏", emoji:"🧠", type:"tap", target:1, cat:"运动"},
+  {id:"night", name:"夜间短遛", emoji:"🌙", type:"tap", target:1, cat:"运动"},
+  {id:"weight",name:"体重(kg)", emoji:"⚖️", type:"num", cat:"体重"},
+  {id:"bath",  name:"洗澡",    emoji:"🛁", type:"tap", cat:"洗澡"},
+  {id:"outer", name:"外驱",    emoji:"🐛", type:"tap", cat:"外驱", cycle:30},
+  {id:"inner", name:"内驱",    emoji:"💊", type:"tap", cat:"内驱", cycle:90},
+  {id:"vaccine",name:"疫苗",   emoji:"💉", type:"tap", cat:"疫苗", cycle:365},
+  {id:"health",name:"健康备注", emoji:"🩺", type:"note", cat:"健康"}
+];
+const KEEP=["weight","outer","inner","vaccine"]; // 删除月数据时保留
+/* 大便「正常」= 第一个选项（随自定义选项变化） */
+const NORMAL_POOP={includes:v=>v===A("poop").opts[0]};
+/* ====================== */
+
+const KEY="zaozao_log_v2",HK="zaozao_hook",GK="zaozao_goal",WG="zaozao_wgoal",GL="zaozao_glo",GH="zaozao_ghi",CK="zaozao_cycle",CFGK="zaozao_cfg";
+let log=JSON.parse(localStorage.getItem(KEY)||"[]");
+let weekOff=0,lastAdded=null,toastTimer=null,charts={};
+const $=id=>document.getElementById(id);
+
+/* ====== 自定义标签配置 ====== */
+let CFG={ov:{},custom:[]};
+try{const c=JSON.parse(localStorage.getItem(CFGK)||"null");if(c)CFG={ov:c.ov||{},custom:c.custom||[]};}catch(_){}
+let ACTIONS=[];
+function buildActions(){
+  ACTIONS=BASE.map(a=>({...a,...(CFG.ov[a.id]||{})})).concat(CFG.custom.map(c=>({cat:"自定义",...c})));
+}
+buildActions();
+const A=id=>ACTIONS.find(a=>a.id===id);
+function saveCfg(){
+  localStorage.setItem(CFGK,JSON.stringify(CFG));
+  buildActions();render();buildUrls();
+}
+
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad=n=>String(n).padStart(2,"0");
+const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const hm=t=>{const d=new Date(t);return pad(d.getHours())+":"+pad(d.getMinutes())};
+const md=t=>{const d=new Date(t);return `${d.getMonth()+1}月${d.getDate()}日 ${hm(t)}`};
+const save=()=>{localStorage.setItem(KEY,JSON.stringify(log));sync();};
+const num=(k,d)=>{const v=parseFloat(localStorage.getItem(k));return isNaN(v)?d:v};
+const goalMs=()=>num(GK,4)*3600000;
+const DAY=864e5;
+
+function fmtHM(ms){
+  if(!ms||ms<0)return "0分";
+  const m=Math.round(ms/60000),h=Math.floor(m/60);
+  return h?`${h}时${pad(m%60)}分`:`${m}分`;
+}
+function fmtHMS(ms){
+  const s=Math.max(0,Math.floor(ms/1000));
+  return `${pad(Math.floor(s/3600))}:${pad(Math.floor(s%3600/60))}:${pad(s%60)}`;
+}
+/* 笼内间隔颜色：短=绿，长=红 */
+function gapColor(ms){
+  const lo=num(GL,2)*3600000,hi=Math.max(num(GH,5)*3600000,lo+1);
+  const r=Math.max(0,Math.min(1,(ms-lo)/(hi-lo)));
+  return `hsl(${Math.round(120*(1-r))},65%,38%)`;
+}
+
+/* ====== 出入计算（笼子 / 遛狗通用） ====== */
+function pairCalc(kind){
+  const o=kind+"_out",i=kind+"_in";
+  const ev=log.filter(e=>e.a===o||e.a===i).sort((x,y)=>x.t-y.t);
+  const out=[],gaps=[];let open=null,lastIn=null;
+  ev.forEach(e=>{
+    if(e.a===o){ if(open===null){ if(lastIn!==null)gaps.push([lastIn,e.t]); open=e.t; lastIn=null; } }
+    else{
+      if(open!==null){ out.push([open,e.t]); open=null; lastIn=e.t; }
+      else if(lastIn===null){ lastIn=e.t; }
+    }
+  });
+  return {out,gaps,open,lastIn};
+}
+const ov=(s,e,ds,de)=>Math.max(0,Math.min(e,de)-Math.max(s,ds));
+function dayStats(c,date,now){
+  const ds=new Date(date.getFullYear(),date.getMonth(),date.getDate()).getTime();
+  const de=new Date(date.getFullYear(),date.getMonth(),date.getDate()+1).getTime();
+  const outs=[...c.out];if(c.open!==null)outs.push([c.open,now]);
+  const gaps=[...c.gaps];if(c.open===null&&c.lastIn!==null)gaps.push([c.lastIn,now]);
+  let outMs=0,cnt=0,maxIn=0,inMs=0;
+  outs.forEach(([s,e])=>{outMs+=ov(s,e,ds,de);if(s>=ds&&s<de)cnt++;});
+  gaps.forEach(([s,e])=>{const v=ov(s,e,ds,de);inMs+=v;maxIn=Math.max(maxIn,v);});
+  const ex=c.gaps.filter(g=>g[1]>=ds&&g[1]<de).map(g=>g[1]-g[0]);
+  return {outMs,cnt,maxIn,inMs,ex,maxEx:ex.length?Math.max(...ex):0};
+}
+
+/* 大便 / 异常 的关联信息 */
+function ctxText(t){
+  const meals=log.filter(e=>e.a==="meal"&&e.t<=t).sort((x,y)=>y.t-x.t);
+  const d=t-DAY;
+  const g=log.filter(e=>e.a==="meal"&&e.t>d&&e.t<=t).reduce((s,e)=>s+(parseFloat(e.v)||0),0);
+  const sn=log.filter(e=>e.a==="snack"&&e.t>d&&e.t<=t).length;
+  const c=pairCalc("crate");
+  const st=c.open!==null?`笼外${fmtHM(t-c.open)}`:(c.lastIn!==null?`笼内${fmtHM(t-c.lastIn)}`:"");
+  return [meals[0]?`距上餐${fmtHM(t-meals[0].t)}`:"无进食记录",`24h喂${g}g`,`零食${sn}次`,st].filter(Boolean).join("·");
+}
+
+/* ====== 面板渲染 ====== */
+function renderCrate(){
+  const now=Date.now(),c=pairCalc("crate"),isOut=c.open!==null;
+  let col="#3c9a4a";
+  if(isOut){
+    $("cst").textContent="🟢 正在笼外";$("csince").textContent="出笼于 "+md(c.open);
+    $("ctm").textContent=fmtHMS(now-c.open);$("ctoggle").textContent="🔒 进笼（记录）";
+  }else if(c.lastIn!==null){
+    col=gapColor(now-c.lastIn);
+    $("cst").textContent="🔒 在笼内";$("csince").textContent="进笼于 "+md(c.lastIn)+"（颜色随时间由绿变红）";
+    $("ctm").textContent=fmtHMS(now-c.lastIn);$("ctoggle").textContent="🔓 出笼（记录）";
+  }else{
+    $("cst").textContent="暂无笼子记录";$("csince").textContent="扫一次贴片或点下方按钮开始";
+    $("ctm").textContent="--:--:--";$("ctoggle").textContent="🔓 出笼（记录）";
+  }
+  $("ctm").style.color=col;
+  $("crate").style.border="2px solid "+col;
+  $("ctoggle").style.background=isOut?"#e0903a":col;
+  const s=dayStats(c,new Date(),now),g=goalMs();
+  $("s1").textContent=fmtHM(s.outMs);$("s2").textContent=fmtHM(s.inMs);
+  $("s3").textContent=s.cnt+" 次";$("s4").textContent=fmtHM(s.maxIn);
+  $("cbar").style.width=(g?Math.min(100,s.outMs/g*100):0)+"%";
+  $("cgoal").textContent=g?`今日目标 ${fmtHM(g)}，已完成 ${Math.min(100,Math.round(s.outMs/g*100))}%`:"未设置每日目标";
+}
+function renderChips(){
+  const c=pairCalc("crate");
+  const list=c.gaps.slice(-8).reverse();
+  $("chips").innerHTML=list.length?list.map(g=>`<span class="chip" style="background:${gapColor(g[1]-g[0])}">${md(g[1])} 出笼 · 笼内 ${fmtHM(g[1]-g[0])}</span>`).join(""):"<span class='tip'>还没有出笼间隔记录</span>";
+}
+function renderWalk(){
+  const now=Date.now(),w=pairCalc("walk"),isOut=w.open!==null;
+  if(isOut){
+    $("wst").textContent="🟢 遛狗中";$("wsince").textContent="出门于 "+md(w.open);
+    $("wtm").textContent=fmtHMS(now-w.open);$("wtoggle").textContent="🏠 回家（记录）";
+  }else{
+    $("wst").textContent="🏠 在家";
+    $("wsince").textContent=w.out.length?"上次遛狗 "+md(w.out[w.out.length-1][0])+"，共 "+fmtHM(w.out[w.out.length-1][1]-w.out[w.out.length-1][0]):"暂无遛狗记录";
+    $("wtm").textContent="--:--:--";$("wtoggle").textContent="🚪 出门遛狗（记录）";
+  }
+  const s=dayStats(w,new Date(),now),g=num(WG,60)*60000;
+  $("wbar").style.width=(g?Math.min(100,s.outMs/g*100):0)+"%";
+  $("wgoal").textContent=`今日已遛 ${fmtHM(s.outMs)}，${s.cnt} 次`+(g?`；目标 ${fmtHM(g)}，完成 ${Math.min(100,Math.round(s.outMs/g*100))}%`:"");
+}
+function renderDue(){
+  const cyc=JSON.parse(localStorage.getItem(CK)||"{}"),now=Date.now();
+  $("due").innerHTML=ACTIONS.filter(a=>a.cycle).map(a=>{
+    const days=cyc[a.id]||a.cycle;
+    const ls=log.filter(e=>e.a===a.id);
+    if(!ls.length)return `<div data-c="${a.id}" style="background:#999">${a.emoji} ${esc(a.name)}：暂无记录（周期 ${days} 天）</div>`;
+    const last=ls.reduce((x,y)=>y.t>x.t?y:x).t;
+    const left=Math.ceil((last+days*DAY-now)/DAY);
+    const col=left<0?"#c0463a":left<=7?"#e0903a":"#3c9a4a";
+    const txt=left<0?`已逾期 ${-left} 天`:left===0?"今天到期":`还有 ${left} 天`;
+    return `<div data-c="${a.id}" style="background:${col}">${a.emoji} ${esc(a.name)}：${txt}<br><small>上次 ${ymd(new Date(last))} · 周期 ${days} 天</small></div>`;
+  }).join("");
+  document.querySelectorAll("[data-c]").forEach(el=>el.onclick=()=>{
+    const id=el.dataset.c,cur=(JSON.parse(localStorage.getItem(CK)||"{}")[id])||A(id).cycle;
+    const v=parseInt(prompt(`${A(id).name}每隔多少天提醒一次？`,cur));
+    if(v>0){const o=JSON.parse(localStorage.getItem(CK)||"{}");o[id]=v;localStorage.setItem(CK,JSON.stringify(o));renderDue();}
+  });
+}
+setInterval(()=>{renderCrate();renderWalk();},1000);
+
+/* ====== 自定义标签设置界面 ====== */
+function renderCfg(){
+  $("cfg").innerHTML=ACTIONS.filter(a=>!a.sys).map(a=>{
+    const custom=a.id.startsWith("c_");
+    let x=`<div class="cfgrow" data-id="${a.id}">
+      <input data-f="emoji" value="${esc(a.emoji)}" style="width:48px;text-align:center">
+      <input data-f="name" value="${esc(a.name)}">`;
+    if(a.type==="tap"||a.type==="num")x+=`<label>每日目标<input data-f="target" type="number" min="0" value="${a.target||""}" placeholder="无" style="width:56px"></label>`;
+    if(a.type==="choice")x+=`<input data-f="opts" value="${esc((a.opts||[]).join(","))}" placeholder="选项，用逗号分隔">`;
+    if(a.presets)x+=`<input data-f="presets" value="${esc(a.presets.join(","))}" placeholder="快捷克数，如 30,40,50">`;
+    x+=`<label><input data-f="show" type="checkbox" ${a.hide?"":"checked"}>显示</label>`;
+    if(custom)x+=`<button class="r s" data-rm="${a.id}">删除</button>`;
+    return x+`</div>`;
+  }).join("");
+}
+$("cfg").onchange=e=>{
+  const row=e.target.closest(".cfgrow");if(!row)return;
+  const id=row.dataset.id,f=e.target.dataset.f;if(!f)return;
+  const custom=CFG.custom.find(c=>c.id===id);
+  const obj=custom||(CFG.ov[id]||(CFG.ov[id]={}));
+  const v=e.target.value;
+  if(f==="emoji")obj.emoji=v.trim()||"📌";
+  else if(f==="name"){if(!v.trim()){renderCfg();return;}obj.name=v.trim();}
+  else if(f==="target")obj.target=parseInt(v)>0?parseInt(v):0;
+  else if(f==="opts"){const o=v.split(/[,，]/).map(s=>s.trim()).filter(Boolean);if(o.length)obj.opts=o;else{renderCfg();return;}}
+  else if(f==="presets")obj.presets=v.split(/[,，]/).map(s=>parseFloat(s)).filter(n=>n>0);
+  else if(f==="show")obj.hide=!e.target.checked;
+  saveCfg();renderCfg();
+};
+$("cfg").onclick=e=>{
+  const id=e.target.dataset.rm;if(!id)return;
+  if(!confirm("删除这个标签？已有的历史记录会保留，但在卡片和周表里不再显示。"))return;
+  CFG.custom=CFG.custom.filter(c=>c.id!==id);saveCfg();renderCfg();
+};
+$("newAdd").onclick=()=>{
+  const name=$("newName").value.trim();if(!name){$("newName").focus();return;}
+  CFG.custom.push({id:"c_"+Date.now().toString(36),name,emoji:$("newEmoji").value.trim()||"📌",type:$("newType").value,target:0});
+  $("newName").value="";saveCfg();renderCfg();
+};
+$("cfgReset").onclick=()=>{
+  if(!confirm("恢复默认标签？自定义的名称、目标和新增的标签会被清除（历史记录不受影响）。"))return;
+  CFG={ov:{},custom:[]};saveCfg();renderCfg();
+};
+
+/* ====== 设置 ====== */
+$("goal").value=num(GK,4);$("glo").value=num(GL,2);$("ghi").value=num(GH,5);$("wg").value=num(WG,60);
+$("goal").onchange=()=>{localStorage.setItem(GK,$("goal").value||"0");render();};
+$("glo").onchange=()=>{localStorage.setItem(GL,$("glo").value||"0");render();};
+$("ghi").onchange=()=>{localStorage.setItem(GH,$("ghi").value||"0");render();};
+$("wg").onchange=()=>{localStorage.setItem(WG,$("wg").value||"0");render();};
+$("ctoggle").onclick=()=>toggle("crate");
+$("wtoggle").onclick=()=>toggle("walk");
+
+/* 补录 */
+$("backfill").onclick=()=>{
+  const d=new Date(),iso=`${ymd(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const opts=ACTIONS.filter(a=>["crate_out","crate_in","walk_out","walk_in"].includes(a.id)||(!a.hide&&a.type==="tap"));
+  $("mbox").innerHTML=`<h3>⏱ 补录记录</h3>
+    <select id="bs">${opts.map(a=>`<option value="${a.id}">${a.emoji} ${esc(a.name)}</option>`).join("")}</select>
+    <input id="bt" type="datetime-local" value="${iso}">
+    <div class="row"><button class="g" id="mc">取消</button><button id="mok">补录</button></div>`;
+  $("modal").style.display="flex";
+  $("mc").onclick=()=>$("modal").style.display="none";
+  $("mok").onclick=()=>{
+    const t=new Date($("bt").value).getTime();
+    if(!t||t>Date.now()+60000){warnToast("请选择有效的过去时间");return;}
+    $("modal").style.display="none";record($("bs").value,"","",t);
+  };
+};
+
+/* ====== 记录 ====== */
+function record(a,v,n,t){
+  const tt=t||Date.now();
+  let note=n||"";
+  if((a==="poop"||a==="abn")&&!t)note=(note?note+" ":"")+"〔"+ctxText(tt)+"〕";
+  const e={id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),a,t:tt,v:v||"",n:note};
+  log.push(e);lastAdded=e.id;save();
+  let extra="",color="";
+  if(a==="crate_in"){const l=pairCalc("crate").out.find(o=>o[1]===e.t);if(l)extra=`，本次笼外 ${fmtHM(l[1]-l[0])}`;}
+  if(a==="crate_out"){const g=pairCalc("crate").gaps.find(x=>x[1]===e.t);if(g){extra=`，出笼前笼内 ${fmtHM(g[1]-g[0])}`;color=gapColor(g[1]-g[0]);}}
+  if(a==="walk_in"){const l=pairCalc("walk").out.find(o=>o[1]===e.t);if(l)extra=`，本次遛狗 ${fmtHM(l[1]-l[0])}`;}
+  if(a==="poop"||a==="abn")extra="\n"+ctxText(tt);
+  if(a==="meal")extra=`，今日已喂 ${log.filter(x=>x.a==="meal"&&ymd(new Date(x.t))===ymd(new Date(tt))).reduce((s,x)=>s+(parseFloat(x.v)||0),0)}g`;
+  render();
+  showToast(`✅ ${A(a).emoji} ${A(a).name}${v?"（"+v+(a==="meal"?"g":"")+"）":""} ${hm(e.t)}${extra}`,true,color);
+  const h=localStorage.getItem(HK);
+  if(h){fetch(h,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify({...e,name:A(a).name,cat:A(a).cat,time:new Date(e.t).toISOString()})}).catch(()=>{});}
+}
+function showToast(msg,undo,color){
+  const t=$("toast");$("tmsg").style.whiteSpace="pre-line";$("tmsg").textContent=msg;$("tundo").style.display=undo?"":"none";
+  t.className="";t.style.background=color||"";t.style.display="flex";
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.display="none",7000);
+}
+function warnToast(msg){const t=$("toast");$("tmsg").textContent=msg;$("tundo").style.display="none";t.className="warn";t.style.background="";t.style.display="flex";clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.display="none",5000);}
+$("tundo").onclick=()=>{
+  if(!lastAdded)return;
+  log=log.filter(e=>e.id!==lastAdded);lastAdded=null;save();render();$("toast").style.display="none";
+};
+
+function openModal(a){
+  const act=A(a);let val="";
+  let h=`<h3>${act.emoji} ${esc(act.name)}</h3>`;
+  if(act.type==="num"){
+    if(act.presets&&act.presets.length)h+=`<div class="opts">${act.presets.map(p=>`<button data-p="${p}">${p}${a==="meal"?"g":""}</button>`).join("")}</div>`;
+    const last=localStorage.getItem("last_"+a)||"";
+    h+=`<input id="mv" type="number" step="0.1" inputmode="decimal" placeholder="输入数值" value="${esc(last)}">`;
+  }
+  if(act.type==="choice")h+=`<div class="opts">${act.opts.map(o=>`<button data-o="${esc(o)}">${esc(o)}</button>`).join("")}</div>`;
+  h+=`<input id="mn" type="text" placeholder="${act.type==="note"?"备注内容":"备注（可选）"}">`;
+  if(a==="poop"||a==="abn")h+=`<p class="tip">将自动附上：${esc(ctxText(Date.now()))}</p>`;
+  h+=`<div class="row"><button class="g" id="mc">取消</button><button id="mok">记录</button></div>`;
+  $("mbox").innerHTML=h;$("modal").style.display="flex";
+  $("mbox").querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{$("mv").value=b.dataset.p;});
+  $("mbox").querySelectorAll("[data-o]").forEach(b=>b.onclick=()=>{
+    val=b.dataset.o;$("mbox").querySelectorAll("[data-o]").forEach(x=>x.classList.toggle("sel",x===b));
+  });
+  $("mc").onclick=()=>$("modal").style.display="none";
+  $("mok").onclick=()=>{
+    if(act.type==="num"){val=$("mv").value;if(!val){$("mv").focus();return;}localStorage.setItem("last_"+a,val);}
+    if(act.type==="choice"&&!val){warnToast("请先选一个选项");return;}
+    const n=$("mn").value.trim();
+    if(act.type==="note"&&!n){$("mn").focus();return;}
+    $("modal").style.display="none";record(a,val,n);
+  };
+}
+
+/* 出入类动作（crate / walk，可带 _out _in） */
+const kindOf=a=>/^(crate|walk)(_out|_in)?$/.test(a)&&a!=="walk_legacy"?a.split("_")[0]:null;
+function toggle(a){
+  const kind=a.split("_")[0];let dir=a.split("_")[1];
+  const c=pairCalc(kind),nm=kind==="crate"?{o:"笼外",i:"笼内",ao:"出笼",ai:"进笼"}:{o:"遛狗中",i:"在家",ao:"出门",ai:"回家"};
+  if(!dir)dir=c.open!==null?"in":"out";
+  if(dir==="out"&&c.open!==null){warnToast(`已经是「${nm.o}」状态（${md(c.open)}）。如果漏扫了「${nm.ai}」，请用「补录」`);return;}
+  if(dir==="in"&&c.open===null){
+    if(kind==="walk"){warnToast("没有找到出门记录，如果漏扫了请用「补录」");return;}
+    if(c.lastIn!==null){warnToast(`已经在笼内了（${md(c.lastIn)} 进笼）。如果漏扫了出笼，请用「补录」`);return;}
+  }
+  record(kind+"_"+dir);
+}
+function trigger(a){
+  if(kindOf(a)&&a!=="walk"||a==="walk"){return toggle(a);}
+  A(a).type==="tap"?record(a):openModal(a);
+}
+
+/* ====== 总渲染 ====== */
+function render(){
+  const now=new Date();$("today").textContent=`${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日`;
+  const td=ymd(now),vis=ACTIONS.filter(a=>!a.hide);
+  $("cards").innerHTML=vis.map(a=>{
+    const mine=log.filter(e=>e.a===a.id);
+    const todayEs=mine.filter(e=>ymd(new Date(e.t))===td);
+    const c=todayEs.length;
+    const last=mine.length?mine.reduce((x,y)=>y.t>x.t?y:x):null;
+    const ok=a.target&&c>=a.target;
+    let cnt=a.target?`${c}/${a.target}`:`今日 ${c} 次`;
+    if(a.id==="meal")cnt+=`　${todayEs.reduce((s,e)=>s+(parseFloat(e.v)||0),0)}g`;
+    return `<div class="a ${ok?"ok":""}" data-a="${a.id}">
+      <div class="t">${a.emoji} ${esc(a.name)}</div><div class="c">${cnt}</div>
+      <div class="l">${last?"上次 "+md(last.t)+(last.v?" · "+esc(last.v):""):"暂无记录"}</div></div>`;
+  }).join("");
+  document.querySelectorAll(".a").forEach(el=>el.onclick=()=>trigger(el.dataset.a));
+
+  const day=(now.getDay()+6)%7;
+  const start=new Date(now.getFullYear(),now.getMonth(),now.getDate()-day+weekOff*7);
+  const ds=[...Array(7)].map((_,i)=>new Date(start.getFullYear(),start.getMonth(),start.getDate()+i));
+  const names=["一","二","三","四","五","六","日"];
+  $("wlabel").textContent=`${ymd(ds[0])} ~ ${ymd(ds[6])}${weekOff===0?"（本周）":""}`;
+  let h="<tr><th>项目</th>"+ds.map((d,i)=>`<th>周${names[i]}<br><small>${d.getMonth()+1}/${d.getDate()}</small></th>`).join("")+"</tr>";
+
+  const c=pairCalc("crate"),w=pairCalc("walk"),g=goalMs(),wg=num(WG,60)*60000,nowMs=Date.now();
+  const st=ds.map(d=>dayStats(c,d,nowMs)),sw=ds.map(d=>dayStats(w,d,nowMs));
+  h+=`<tr><td class="n"><b>🔓 出笼时长</b></td>`+st.map(s=>`<td class="${s.outMs?(g&&s.outMs>=g?"g":"p"):""}">${s.outMs?fmtHM(s.outMs):""}</td>`).join("")+"</tr>";
+  h+=`<tr><td class="n">　出笼次数</td>`+st.map(s=>`<td>${s.cnt||""}</td>`).join("")+"</tr>";
+  h+=`<tr><td class="n">　出笼前笼内（最长）</td>`+st.map(s=>`<td style="${s.maxEx?"color:"+gapColor(s.maxEx)+";font-weight:700":""}">${s.maxEx?fmtHM(s.maxEx):""}</td>`).join("")+"</tr>";
+  h+=`<tr><td class="n"><b>🚶 遛狗时长</b></td>`+sw.map(s=>`<td class="${s.outMs?(wg&&s.outMs>=wg?"g":"p"):""}">${s.outMs?fmtHM(s.outMs):""}</td>`).join("")+"</tr>";
+  h+=`<tr><td class="n">　遛狗次数</td>`+sw.map(s=>`<td>${s.cnt||""}</td>`).join("")+"</tr>";
+
+  vis.forEach(a=>{
+    h+=`<tr><td class="n">${a.emoji} ${esc(a.name)}</td>`;
+    ds.forEach(d=>{
+      const es=log.filter(e=>e.a===a.id&&ymd(new Date(e.t))===ymd(d)).sort((x,y)=>x.t-y.t);
+      let cls="",txt="";
+      if(es.length){
+        if(a.id==="meal")txt=`${es.length}餐 ${es.reduce((s,e)=>s+(parseFloat(e.v)||0),0)}g`;
+        else if(a.type==="num")txt=esc(es[es.length-1].v);
+        else if(a.type==="choice")txt=es.map(e=>esc(e.v)).join("/");
+        else if(a.type==="note")txt="✓"+(es.length>1?es.length:"");
+        else txt=a.target?`${es.length}/${a.target}`:"✓"+(es.length>1?es.length:"");
+        cls=a.target?(es.length>=a.target?"g":"p"):(a.id==="abn"||(a.id==="poop"&&es.some(e=>!NORMAL_POOP.includes(e.v)))?"p":"g");
+      }
+      h+=`<td class="${cls}">${txt}</td>`;
+    });
+    h+="</tr>";
+  });
+  const tg=vis.filter(a=>a.target);
+  h+="<tr><td class='n'><b>目标完成</b></td>"+ds.map(d=>{
+    const n=tg.filter(a=>log.filter(e=>e.a===a.id&&ymd(new Date(e.t))===ymd(d)).length>=a.target).length;
+    return `<td><b>${n}/${tg.length}</b></td>`;
+  }).join("")+"</tr>";
+  $("week").innerHTML=h;
+
+  const dur={};
+  c.gaps.forEach(x=>dur["crate_out"+x[1]]={t:"笼内 "+fmtHM(x[1]-x[0]),col:gapColor(x[1]-x[0])});
+  c.out.forEach(x=>dur["crate_in"+x[1]]={t:"笼外 "+fmtHM(x[1]-x[0])});
+  w.out.forEach(x=>dur["walk_in"+x[1]]={t:"遛狗 "+fmtHM(x[1]-x[0])});
+  const recent=[...log].sort((a,b)=>b.t-a.t).slice(0,40);
+  $("log").innerHTML=recent.length?recent.map(e=>{
+    const a=A(e.a)||{emoji:"❓",name:e.a},d=dur[e.a+e.t];
+    return `<div><span>${a.emoji} ${esc(a.name)}${e.v?" · <b>"+esc(e.v)+(e.a==="meal"?"g":"")+"</b>":""}${d?` <b style="color:${d.col||"#3c9a4a"}">${d.t}</b>`:""}${e.n?" <span class='m'>"+esc(e.n)+"</span>":""}</span>
+    <span style="white-space:nowrap"><span class="m">${md(e.t)}</span> <button class="g s" data-del="${e.id}">删</button></span></div>`;
+  }).join(""):"<p class='tip'>还没有记录，碰一下 NFC 贴片试试吧</p>";
+  document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{
+    if(confirm("删除这条记录？")){log=log.filter(e=>e.id!==b.dataset.del);save();render();}
+  });
+  renderCrate();renderChips();renderWalk();renderDue();renderCharts();fillPeriods();
+}
+$("prev").onclick=()=>{weekOff--;render();};
+$("next").onclick=()=>{if(weekOff<0){weekOff++;render();}};
+
+/* ====== 图表 ====== */
+function mk(id,cfg){
+  if(typeof Chart==="undefined")return;
+  if(charts[id])charts[id].destroy();
+  cfg.options={responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}},...(cfg.options||{})};
+  charts[id]=new Chart($(id),cfg);
+}
+function renderCharts(){
+  if(typeof Chart==="undefined")return;
+  const n=+$("crange").value,now=new Date(),nowMs=Date.now();
+  const ds=[...Array(n)].map((_,i)=>new Date(now.getFullYear(),now.getMonth(),now.getDate()-n+1+i));
+  const labels=ds.map(d=>`${d.getMonth()+1}/${d.getDate()}`);
+  const c=pairCalc("crate"),w=pairCalc("walk");
+  const sc=ds.map(d=>dayStats(c,d,nowMs)),sw=ds.map(d=>dayStats(w,d,nowMs));
+  const from=ds[0].getTime(),inDay=(a,d)=>log.filter(e=>e.a===a&&ymd(new Date(e.t))===ymd(d));
+  mk("ch1",{type:"bar",data:{labels,datasets:[{data:sc.map(s=>+(s.outMs/3600000).toFixed(2)),backgroundColor:"#e0903a"},{type:"line",data:ds.map(()=>goalMs()/3600000),borderColor:"#c0463a",borderDash:[5,5],pointRadius:0}]}});
+  mk("ch2",{type:"bar",data:{labels,datasets:[{data:sw.map(s=>Math.round(s.outMs/60000)),backgroundColor:"#3c9a4a"},{type:"line",data:ds.map(()=>num(WG,60)),borderColor:"#c0463a",borderDash:[5,5],pointRadius:0}]}});
+  const gp=c.gaps.filter(x=>x[1]>=from);
+  mk("ch3",{type:"bar",data:{labels:gp.map(x=>md(x[1])),datasets:[{data:gp.map(x=>+((x[1]-x[0])/3600000).toFixed(2)),backgroundColor:gp.map(x=>gapColor(x[1]-x[0]))}]},options:{scales:{x:{ticks:{display:gp.length<=14}}}}});
+  const wt=log.filter(e=>e.a==="weight"&&e.t>=from).sort((x,y)=>x.t-y.t);
+  mk("ch4",{type:"line",data:{labels:wt.map(e=>md(e.t).split(" ")[0]),datasets:[{data:wt.map(e=>parseFloat(e.v)),borderColor:"#8a5a2b",backgroundColor:"#8a5a2b",tension:.2}]}});
+  mk("ch5",{type:"bar",data:{labels,datasets:[
+    {label:"正常",data:ds.map(d=>inDay("poop",d).filter(e=>NORMAL_POOP.includes(e.v)).length),backgroundColor:"#3c9a4a"},
+    {label:"异常",data:ds.map(d=>inDay("poop",d).filter(e=>!NORMAL_POOP.includes(e.v)).length),backgroundColor:"#c0463a"}]},
+    options:{plugins:{legend:{display:true}},scales:{x:{stacked:true},y:{stacked:true,ticks:{precision:0}}}}});
+  mk("ch6",{type:"bar",data:{labels,datasets:[{data:ds.map(d=>inDay("meal",d).reduce((s,e)=>s+(parseFloat(e.v)||0),0)),backgroundColor:"#e0903a"}]}});
+  mk("ch7",{type:"bar",data:{labels,datasets:[{data:ds.map(d=>inDay("abn",d).length),backgroundColor:"#c0463a"}]},options:{scales:{y:{ticks:{precision:0}}}}});
+}
+$("crange").onchange=renderCharts;
+
+/* ====== 周报 / 月报 ====== */
+function fillPeriods(){
+  const sel=$("rp"),cur=sel.value;
+  const nm=new Date(new Date().getFullYear(),new Date().getMonth(),1).getTime();
+  const months=[...new Set(log.filter(e=>e.t<nm).map(e=>ymd(new Date(e.t)).slice(0,7)))].sort().reverse();
+  sel.innerHTML=`<option value="w0">本周</option><option value="w1">上周</option><option value="m0">本月（进行中）</option>`+months.map(m=>`<option value="m:${m}">${m.slice(0,4)}年${+m.slice(5)}月</option>`).join("");
+  if(cur&&[...sel.options].some(o=>o.value===cur))sel.value=cur;
+}
+function periodRange(v){
+  const now=new Date();
+  if(v==="w0"||v==="w1"){
+    const day=(now.getDay()+6)%7;
+    const s=new Date(now.getFullYear(),now.getMonth(),now.getDate()-day-(v==="w1"?7:0));
+    return {s:s.getTime(),e:new Date(s.getFullYear(),s.getMonth(),s.getDate()+7).getTime(),label:v==="w0"?"本周":"上周",month:false};
+  }
+  let y=now.getFullYear(),m=now.getMonth();
+  if(v.startsWith("m:")){y=+v.slice(2,6);m=+v.slice(7)-1;}
+  const s=new Date(y,m,1),e=new Date(y,m+1,1);
+  return {s:s.getTime(),e:e.getTime(),label:`${y}年${m+1}月`,month:true,past:e.getTime()<=new Date(now.getFullYear(),now.getMonth(),1).getTime()};
+}
+function makeReport(p){
+  const {s,e,label}=p,nowMs=Date.now();
+  const ev=log.filter(x=>x.t>=s&&x.t<e).sort((a,b)=>a.t-b.t);
+  const c=pairCalc("crate"),w=pairCalc("walk");
+  const days=[];for(let t=s;t<e&&t<=nowMs;){const d=new Date(t);days.push(d);t=new Date(d.getFullYear(),d.getMonth(),d.getDate()+1).getTime();}
+  const H=ms=>(ms/3600000).toFixed(1)+"小时";
+  const L=[];
+  L.push(`🐶 皂皂${label}报告`,`统计区间：${ymd(new Date(s))} ~ ${ymd(new Date(e-1))}（有效 ${days.length} 天）`,"");
+  const sc=days.map(d=>dayStats(c,d,nowMs)),sw=days.map(d=>dayStats(w,d,nowMs));
+  const totOut=sc.reduce((a,x)=>a+x.outMs,0),gl=goalMs();
+  const gaps=c.gaps.filter(x=>x[1]>=s&&x[1]<e);
+  L.push("【一、出笼情况】",`累计出笼 ${H(totOut)}，日均 ${H(totOut/Math.max(1,days.length))}`,
+    `达到每日目标（${H(gl)}）的天数：${sc.filter(x=>gl&&x.outMs>=gl).length}/${days.length}`,
+    `出笼次数 ${sc.reduce((a,x)=>a+x.cnt,0)} 次`);
+  if(gaps.length){
+    const mx=gaps.reduce((x,y)=>(y[1]-y[0])>(x[1]-x[0])?y:x),avg=gaps.reduce((a,x)=>a+x[1]-x[0],0)/gaps.length;
+    L.push(`出笼前笼内间隔：平均 ${fmtHM(avg)}，最长 ${fmtHM(mx[1]-mx[0])}（${md(mx[1])} 出笼），超过 ${num(GH,5)} 小时 ${gaps.filter(x=>x[1]-x[0]>=num(GH,5)*3600000).length} 次`);
+  }
+  L.push("","【二、遛狗】",`共 ${sw.reduce((a,x)=>a+x.cnt,0)} 次，累计 ${fmtHM(sw.reduce((a,x)=>a+x.outMs,0))}，日均 ${fmtHM(sw.reduce((a,x)=>a+x.outMs,0)/Math.max(1,days.length))}`);
+  const meals=ev.filter(x=>x.a==="meal"),totG=meals.reduce((a,x)=>a+(parseFloat(x.v)||0),0);
+  L.push("","【三、饮食】",`喂食 ${meals.length} 餐，共 ${totG}g，日均 ${(totG/Math.max(1,days.length)).toFixed(0)}g；零食 ${ev.filter(x=>x.a==="snack").length} 次`);
+  const poops=ev.filter(x=>x.a==="poop"),cnt={};poops.forEach(x=>cnt[x.v]=(cnt[x.v]||0)+1);
+  L.push("","【四、大便】",poops.length?`共 ${poops.length} 次：`+Object.entries(cnt).map(([k,v])=>`${k} ${v}`).join("，"):"无记录");
+  poops.filter(x=>!NORMAL_POOP.includes(x.v)).forEach(x=>L.push(`  · ${md(x.t)} ${x.v} ${x.n||""}`));
+  const wt=ev.filter(x=>x.a==="weight");
+  L.push("","【五、体重】",wt.length?`${wt[0].v}kg → ${wt[wt.length-1].v}kg（变化 ${(parseFloat(wt[wt.length-1].v)-parseFloat(wt[0].v)).toFixed(2)}kg，共 ${wt.length} 次称重）`:"本期无称重记录");
+  const ab=ev.filter(x=>x.a==="abn"),ac={};ab.forEach(x=>ac[x.v]=(ac[x.v]||0)+1);
+  L.push("","【六、异常事件】",ab.length?`共 ${ab.length} 次：`+Object.entries(ac).map(([k,v])=>`${k} ${v}`).join("，"):"无异常记录");
+  ab.forEach(x=>L.push(`  · ${md(x.t)} ${x.v} ${x.n||""}`));
+  L.push("","【七、驱虫 / 疫苗 / 护理】");
+  const hc=ev.filter(x=>["outer","inner","vaccine","bath"].includes(x.a));
+  L.push(hc.length?hc.map(x=>`${md(x.t)} ${A(x.a).name}`).join("\n"):"本期无记录");
+  const cu=ev.filter(x=>x.a.startsWith("c_")||["wake","play","brain","night","health"].includes(x.a));
+  if(cu.length){
+    const cc={};cu.forEach(x=>{const nm=(A(x.a)||{name:x.a}).name;cc[nm]=(cc[nm]||0)+1;});
+    L.push("","【八、其他标签统计】",Object.entries(cc).map(([k,v])=>`${k} ${v} 次`).join("，"));
+  }
+  L.push("","【九、每日明细】");
+  days.forEach((d,i)=>{
+    const k=ymd(d),de=ev.filter(x=>ymd(new Date(x.t))===k);
+    L.push(`${k}  出笼${fmtHM(sc[i].outMs)}  遛狗${fmtHM(sw[i].outMs)}  喂${de.filter(x=>x.a==="meal").reduce((a,x)=>a+(parseFloat(x.v)||0),0)}g  便${de.filter(x=>x.a==="poop").length}次  异常${de.filter(x=>x.a==="abn").length}次`);
+  });
+  return L.join("\n");
+}
+function dl(name,text,type){const b=new Blob([text],{type});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=name;a.click();}
+const csvOf=list=>{
+  const rows=[["日期","时间","分类","动作","值","备注"]];
+  [...list].sort((a,b)=>a.t-b.t).forEach(e=>{const a=A(e.a)||{name:e.a,cat:""};rows.push([ymd(new Date(e.t)),hm(e.t),a.cat,a.name,e.v,e.n]);});
+  return "\ufeff"+rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+};
+$("rgen").onclick=()=>{$("rtxt").value=makeReport(periodRange($("rp").value));};
+$("rcopy").onclick=()=>{if(!$("rtxt").value)$("rgen").click();$("rtxt").select();(navigator.clipboard?navigator.clipboard.writeText($("rtxt").value):Promise.reject()).catch(()=>document.execCommand("copy"));warnToast("已复制报告");};
+$("rtxtdl").onclick=()=>{if(!$("rtxt").value)$("rgen").click();const p=periodRange($("rp").value);dl(`皂皂报告-${p.label}.txt`,$("rtxt").value,"text/plain");};
+$("rcsv").onclick=()=>{const p=periodRange($("rp").value);dl(`皂皂记录-${p.label}.csv`,csvOf(log.filter(x=>x.t>=p.s&&x.t<p.e)),"text/csv");};
+$("rdel").onclick=()=>{
+  const p=periodRange($("rp").value);
+  if(!p.month||!p.past){warnToast("只能删除已结束的历史月份，请先在下拉框选择");return;}
+  const del=log.filter(x=>x.t>=p.s&&x.t<p.e&&!KEEP.includes(x.a));
+  if(!del.length){warnToast("该月没有可删除的记录");return;}
+  $("rtxt").value=makeReport(p);
+  dl(`皂皂报告-${p.label}.txt`,$("rtxt").value,"text/plain");
+  setTimeout(()=>dl(`皂皂备份-${p.label}.json`,JSON.stringify(log.filter(x=>x.t>=p.s&&x.t<p.e)),"application/json"),600);
+  setTimeout(()=>{
+    if(confirm(`报告和备份已下载（请确认文件已保存）。\n现在删除 ${p.label} 的 ${del.length} 条记录？\n（体重、驱虫、疫苗记录会保留；云端同步删除）`)){
+      const ids=new Set(del.map(x=>x.id));log=log.filter(x=>!ids.has(x.id));save();render();warnToast(`已删除 ${del.length} 条记录`);
+    }
+  },1500);
+};
+
+/* ====== NFC 链接 ====== */
+function buildUrls(){
+  const base=location.origin+location.pathname;
+  let h=urlRow("🔁 出/进笼 切换（推荐）",`${base}?a=crate`)+urlRow("🔁 遛狗 出门/回家 切换",`${base}?a=walk`);
+  h+=urlRow("🔓 仅出笼",`${base}?a=crate_out`)+urlRow("🔒 仅进笼",`${base}?a=crate_in`)+urlRow("🚪 仅出门",`${base}?a=walk_out`)+urlRow("🏠 仅回家",`${base}?a=walk_in`);
+  ACTIONS.filter(a=>!a.hide).forEach(a=>{
+    h+=urlRow(a.emoji+" "+esc(a.name),`${base}?a=${a.id}`);
+    if(a.presets)a.presets.forEach(p=>{h+=urlRow("　└ "+p+"g",`${base}?a=${a.id}&v=${p}`);});
+    if(a.type==="choice")a.opts.forEach(o=>{h+=urlRow("　└ "+esc(o),`${base}?a=${a.id}&v=${encodeURIComponent(o)}`);});
+  });
+  $("urls").innerHTML=h;
+  document.querySelectorAll("[data-copy]").forEach(b=>b.onclick=()=>{
+    const i=b.previousElementSibling;i.select();
+    (navigator.clipboard?navigator.clipboard.writeText(i.value):Promise.reject()).catch(()=>document.execCommand("copy"));
+    b.textContent="已复制";setTimeout(()=>b.textContent="复制",1200);
+  });
+}
+const urlRow=(n,u)=>`<div class="url"><b>${n}</b><input readonly value="${esc(u)}"><button class="s" data-copy>复制</button></div>`;
+
+/* ====== 导入导出 ====== */
+$("expJson").onclick=()=>dl(`zaozao-${ymd(new Date())}.json`,JSON.stringify(log),"application/json");
+$("expCsv").onclick=()=>dl(`zaozao-${ymd(new Date())}.csv`,csvOf(log),"text/csv");
+$("impBtn").onclick=()=>$("impFile").click();
+$("impFile").onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  f.text().then(t=>{
+    try{const arr=JSON.parse(t);const ids=new Set(log.map(x=>x.id));let n=0;
+      arr.forEach(x=>{if(x&&x.id&&x.a&&x.t&&!ids.has(x.id)){log.push(x);n++;}});
+      save();render();alert(`导入完成，新增 ${n} 条`);
+    }catch(_){alert("文件格式不正确");}
+  });
+};
+$("hook").value=localStorage.getItem(HK)||"";
+$("hookSave").onclick=()=>{localStorage.setItem(HK,$("hook").value.trim());alert("已保存");};
+$("clearAll").onclick=()=>{if(confirm("确定清空所有记录？建议先导出备份")){log=[];save();render();}};
+
+/* ====== NFC 扫描处理 ====== */
+function handleScan(){
+  const p=new URLSearchParams(location.search);const a=p.get("a");
+  if(!a)return;
+  history.replaceState(null,"",location.pathname);
+  if(kindOf(a)||a==="walk"){
+    const k=a.split("_")[0];
+    if(log.some(e=>e.a.startsWith(k+"_")&&Date.now()-e.t<20000)){warnToast("刚刚已记录过，已忽略重复扫描");return;}
+    toggle(a);return;
+  }
+  const act=A(a);
+  if(!act){warnToast("未知的贴片动作："+a);return;}
+  const v=p.get("v");
+  if(log.some(e=>e.a===a&&Date.now()-e.t<20000)){warnToast(`刚刚已记录过「${act.name}」，已忽略重复扫描`);return;}
+  if(act.type==="tap"||(act.type==="choice"&&v&&act.opts.includes(v))||(act.type==="num"&&v&&!isNaN(v)))record(a,v||"");
+  else openModal(a);
+}
+
+/* ====== Supabase 云同步 ====== */
+const L=k=>localStorage.getItem(k)||"";
+let sess=JSON.parse(L("sb_sess")||"null"),syncing=false,again=false;
+const sbReady=()=>L("sb_url")&&L("sb_key")&&sess;
+const setStat=s=>$("sbStat").textContent=s;
+async function sbLogin(email,pw){
+  const r=await fetch(L("sb_url")+"/auth/v1/token?grant_type=password",{method:"POST",
+    headers:{apikey:L("sb_key"),"Content-Type":"application/json"},body:JSON.stringify({email,password:pw})});
+  const j=await r.json();if(!r.ok)throw new Error(j.error_description||j.msg||"登录失败");
+  setSess(j);
+}
+function setSess(j){
+  sess={access:j.access_token,refresh:j.refresh_token,exp:Date.now()+j.expires_in*1000};
+  localStorage.setItem("sb_sess",JSON.stringify(sess));
+}
+async function sbToken(){
+  if(sess.exp-60000>Date.now())return sess.access;
+  const r=await fetch(L("sb_url")+"/auth/v1/token?grant_type=refresh_token",{method:"POST",
+    headers:{apikey:L("sb_key"),"Content-Type":"application/json"},body:JSON.stringify({refresh_token:sess.refresh})});
+  const j=await r.json();if(!r.ok){sess=null;localStorage.removeItem("sb_sess");throw new Error("登录已过期，请重新登录");}
+  setSess(j);return sess.access;
+}
+async function sbReq(path,opt={}){
+  const tk=await sbToken();
+  const r=await fetch(L("sb_url")+"/rest/v1/"+path,{...opt,headers:{apikey:L("sb_key"),Authorization:"Bearer "+tk,"Content-Type":"application/json",...(opt.headers||{})}});
+  if(!r.ok)throw new Error("同步失败 "+r.status+" "+(await r.text()).slice(0,80));
+  return r;
+}
+async function sync(){
+  if(!sbReady())return;
+  if(syncing){again=true;return;}
+  syncing=true;setStat("同步中…");
+  try{
+    const synced=new Set(JSON.parse(L("sb_synced")||"[]"));
+    const ids=new Set(log.map(e=>e.id));
+    const add=log.filter(e=>!synced.has(e.id));
+    const del=[...synced].filter(i=>!ids.has(i));
+    const addIds=new Set(add.map(e=>e.id));
+    for(let i=0;i<add.length;i+=500){
+      await sbReq("logs?on_conflict=id",{method:"POST",headers:{Prefer:"resolution=merge-duplicates,return=minimal"},
+        body:JSON.stringify(add.slice(i,i+500).map(e=>({id:e.id,a:e.a,t:e.t,v:e.v||"",n:e.n||""})))});
+    }
+    for(let i=0;i<del.length;i+=100){
+      await sbReq("logs?id=in.("+del.slice(i,i+100).map(encodeURIComponent).join(",")+")",{method:"DELETE"});
+    }
+    let all=[],from=0;
+    while(true){
+      const r=await sbReq("logs?select=id,a,t,v,n&order=t.asc",{headers:{Range:`${from}-${from+999}`}});
+      const rows=await r.json();all.push(...rows);
+      if(rows.length<1000)break;from+=1000;
+    }
+    const remote=new Set(all.map(e=>e.id));
+    const extra=log.filter(e=>!remote.has(e.id)&&!synced.has(e.id)&&!addIds.has(e.id));
+    log=[...all.map(e=>({...e,t:Number(e.t)})),...extra];
+    localStorage.setItem(KEY,JSON.stringify(log));
+    localStorage.setItem("sb_synced",JSON.stringify([...remote]));
+    setStat("✅ 已同步 "+md(Date.now())+"（共 "+log.length+" 条）");
+    render();
+  }catch(err){setStat("⚠️ "+err.message+"（本地数据已保存，稍后自动重试）");}
+  syncing=false;
+  if(again){again=false;sync();}
+}
+$("sbUrl").value=L("sb_url");$("sbKey").value=L("sb_key");
+$("sbLogin").onclick=async()=>{
+  localStorage.setItem("sb_url",$("sbUrl").value.trim().replace(/\/$/,""));
+  localStorage.setItem("sb_key",$("sbKey").value.trim());
+  try{
+    await sbLogin($("sbEmail").value.trim(),$("sbPw").value);
+    $("sbPw").value="";localStorage.removeItem("sb_synced");await sync();
+  }catch(e){setStat("⚠️ "+e.message);}
+};
+$("sbSync").onclick=sync;
+$("sbOut").onclick=()=>{sess=null;localStorage.removeItem("sb_sess");localStorage.removeItem("sb_synced");setStat("已退出登录");};
+setStat(sbReady()?"已登录":"未登录");
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)sync();});
+setInterval(sync,60000);
+
+/* 启动：先拉取云端最新数据（最多等 4 秒），再处理 NFC 扫描，避免出笼/进笼判断错误 */
+render();buildUrls();renderCfg();
+(async()=>{
+  if(sbReady())await Promise.race([sync(),new Promise(r=>setTimeout(r,4000))]);
+  handleScan();
+})();
+</script>
+</body>
+</html>
