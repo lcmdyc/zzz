@@ -79,3 +79,51 @@ details summary{cursor:pointer;font-weight:600;color:#8a5a2b;margin-bottom:8px}
 .set input{width:52px;border:1px solid #ddd;border-radius:6px;padding:2px 4px}
 @media(max-width:520px){.cstats{grid-template-columns:repeat(2,1fr)}}
 @media print{.noprint{display:none}body{background:#fff}}
+/* ====== 多档案 / 自定义记录项 追加样式 ====== */
+
+/* 档案标签栏 */
+.tabs{display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px;margin-bottom:4px;-webkit-overflow-scrolling:touch}
+.tab{flex:0 0 auto;background:#fff;color:#8a5a2b;border:1px solid #f0e4d2;border-radius:20px;padding:6px 14px;font-size:14px;white-space:nowrap}
+.tab.on{background:#e0903a;color:#fff;border-color:#e0903a;font-weight:700}
+.tab.tab-mgr{background:#f1f1f1;color:#666;border-color:#e5e5e5}
+
+/* 计时卡片（由 ui.js 动态生成，沿用原 #crate 的外观） */
+#timers .card{border:2px solid #cfe9cf}
+#timers .card.in{border-color:#f0d9b5;background:#fffaf2}
+.tl-head{font-size:17px;font-weight:700;color:#8a5a2b;margin-bottom:8px}
+.tl-st{font-size:18px;font-weight:700}
+.tl-since{font-size:12px;color:#888}
+.tl-tm{font-size:30px;font-weight:700;font-variant-numeric:tabular-nums;color:#3c9a4a;margin:4px 0}
+.tl-warn{margin-top:2px;font-size:13px}
+.tl-btn{width:100%;padding:12px;font-size:16px;margin:10px 0 0}
+.tl-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(70px,1fr));gap:8px;margin-top:12px}
+.tl-stats div{background:#f8f8f8;border-radius:10px;padding:8px;text-align:center}
+.tl-stats b{display:block;font-size:16px;font-variant-numeric:tabular-nums}
+.tl-stats span{font-size:11px;color:#888}
+.tl-bar{height:8px;background:#eee;border-radius:6px;overflow:hidden;margin-top:10px}
+.tl-bar i{display:block;height:100%;background:linear-gradient(90deg,#9bd5a0,#3c9a4a);width:0}
+.tl-gaps{margin-top:6px}
+
+/* 状态记录区 */
+.sbox{background:#fff;border-radius:14px;padding:14px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.sbox h3{font-size:17px;color:#8a5a2b;margin-bottom:6px}
+
+/* 图表 */
+.chbox{margin-bottom:14px}
+.chbox h3{font-size:14px;color:#666;margin-bottom:4px}
+.chbox canvas{max-height:200px}
+
+/* 管理弹窗 / 编辑器 */
+#modal .box.big{max-width:520px}
+.mrow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f1f1f1;flex-wrap:wrap}
+.mbtn{display:flex;gap:6px;flex-wrap:wrap}
+.fld{margin:8px 0}
+.fld>label{display:block;font-size:12px;color:#666;margin-bottom:2px}
+.ck{display:flex;align-items:center;gap:8px;font-size:14px;margin:8px 0}
+#modal .ck input{width:auto;margin:0}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.orow{display:flex;gap:6px;align-items:center;margin:4px 0}
+#modal .orow input.on{flex:1;min-width:0}
+#modal .orow input.oc{width:44px;padding:2px;height:40px;flex:0 0 auto}
+#modal .orow select{width:96px;flex:0 0 auto;padding:8px 4px;font-size:13px}
+.orm{flex:0 0 auto}
