@@ -1,5 +1,5 @@
 /* ====== Supabase 云同步（增量记录 + 配置） ======
-   配置同步由 profiles.js 的 syncCfg() 负责（settings 表 key='profiles'）。 */
+   记录与配置分开同步，互不影响。配置同步由 profiles.js 的 syncCfg() 负责。 */
 const L=k=>localStorage.getItem(k)||"";
 let sess=JSON.parse(L("sb_sess")||"null"),syncing=false,again=false;
 const sbReady=()=>L("sb_url")&&L("sb_key")&&sess;
@@ -18,51 +18,55 @@ async function sbToken(){
 async function sbReq(path,opt={}){
   const tk=await sbToken();
   const r=await fetch(L("sb_url")+"/rest/v1/"+path,{...opt,headers:{apikey:L("sb_key"),Authorization:"Bearer "+tk,"Content-Type":"application/json",...(opt.headers||{})}});
-  if(!r.ok)throw new Error("同步失败 "+r.status+" "+(await r.text()).slice(0,80));
+  if(!r.ok)throw new Error(r.status+" "+(await r.text()).slice(0,100));
   return r;
 }
+
+/* ---- 记录同步：返回 [上传条数, 下载条数] ---- */
+async function syncLogs(){
+  const hasBase=!!L("sb_synced");
+  const synced=new Set(JSON.parse(L("sb_synced")||"[]"));
+  const ids=new Set(log.map(e=>e.id));
+  const add=log.filter(e=>!synced.has(e.id));
+  const del=[...synced].filter(i=>!ids.has(i));
+  const addIds=new Set(add.map(e=>e.id));
+  for(let i=0;i<add.length;i+=500){
+    await sbReq("logs?on_conflict=id",{method:"POST",headers:{Prefer:"resolution=merge-duplicates,return=minimal"},
+      body:JSON.stringify(add.slice(i,i+500).map(e=>({id:e.id,a:e.a,t:e.t,v:e.v||"",n:e.n||""})))});
+  }
+  for(let i=0;i<del.length;i+=100){
+    await sbReq("logs?id=in.("+del.slice(i,i+100).map(encodeURIComponent).join(",")+")",{method:"DELETE"});
+  }
+  const since=hasBase?Date.now()-62*864e5:0;
+  let all=[],from=0;
+  for(let page=0;page<200;page++){
+    const r=await sbReq(`logs?select=id,a,t,v,n&t=gte.${since}&order=t.asc,id.asc`,{headers:{"Range-Unit":"items",Range:`${from}-${from+999}`}});
+    const rows=await r.json();all.push(...rows);
+    if(rows.length<1000)break;from+=1000;
+  }
+  const remote=new Set(all.map(e=>e.id));
+  const old=log.filter(e=>e.t<since);
+  const extra=log.filter(e=>e.t>=since&&!remote.has(e.id)&&!synced.has(e.id)&&!addIds.has(e.id));
+  log=[...old,...all.map(e=>({...e,t:Number(e.t)})),...extra];
+  localStorage.setItem(KEY,JSON.stringify(log));
+  const keepOld=old.filter(e=>synced.has(e.id)||addIds.has(e.id)).map(e=>e.id);
+  localStorage.setItem("sb_synced",JSON.stringify([...keepOld,...remote]));
+  return [add.length,all.length];
+}
+
 async function sync(){
   if(!sbReady())return;
   if(syncing){again=true;return;}
   syncing=true;setStat("同步中…");
-  try{
-    // 1. 同步配置（profiles.js 里的 syncCfg：谁的时间新用谁）
-    await syncCfg();
-
-    // 2. 同步记录 (logs 表)
-    const hasBase=!!L("sb_synced");
-    const synced=new Set(JSON.parse(L("sb_synced")||"[]"));
-    const ids=new Set(log.map(e=>e.id));
-    const add=log.filter(e=>!synced.has(e.id));
-    const del=[...synced].filter(i=>!ids.has(i));
-    const addIds=new Set(add.map(e=>e.id));
-    for(let i=0;i<add.length;i+=500){
-      await sbReq("logs?on_conflict=id",{method:"POST",headers:{Prefer:"resolution=merge-duplicates,return=minimal"},
-        body:JSON.stringify(add.slice(i,i+500).map(e=>({id:e.id,a:e.a,t:e.t,v:e.v||"",n:e.n||""})))});
-    }
-    for(let i=0;i<del.length;i+=100){
-      await sbReq("logs?id=in.("+del.slice(i,i+100).map(encodeURIComponent).join(",")+")",{method:"DELETE"});
-    }
-    const since=hasBase?Date.now()-62*864e5:0;
-    let all=[],from=0;
-    while(true){
-      const r=await sbReq(`logs?select=id,a,t,v,n&t=gte.${since}&order=t.asc,id.asc`,{headers:{Range:`${from}-${from+999}`}});
-      const rows=await r.json();all.push(...rows);
-      if(rows.length<1000)break;from+=1000;
-    }
-    const remote=new Set(all.map(e=>e.id));
-    const old=log.filter(e=>e.t<since);
-    const extra=log.filter(e=>e.t>=since&&!remote.has(e.id)&&!synced.has(e.id)&&!addIds.has(e.id));
-    log=[...old,...all.map(e=>({...e,t:Number(e.t)})),...extra];
-    localStorage.setItem(KEY,JSON.stringify(log));
-    const keepOld=old.filter(e=>synced.has(e.id)||addIds.has(e.id)).map(e=>e.id);
-    localStorage.setItem("sb_synced",JSON.stringify([...keepOld,...remote]));
-    setStat("✅ 已同步 "+md(Date.now()));
-    render();
-  }catch(err){setStat("⚠️ "+err.message);}
+  const errs=[];let up=0,down=0;
+  try{[up,down]=await syncLogs();}catch(e){errs.push("记录："+e.message);}
+  try{await syncCfg();}catch(e){errs.push("配置："+e.message);}
+  try{render();}catch(e){errs.push("渲染："+e.message);}
+  setStat(errs.length?"⚠️ "+errs.join("；"):`✅ 已同步 ${md(Date.now())}（↑${up} ↓${down}）`);
   syncing=false;
   if(again){again=false;sync();}
 }
+
 $("sbUrl").value=L("sb_url");$("sbKey").value=L("sb_key");
 $("sbLogin").onclick=async()=>{
   localStorage.setItem("sb_url",$("sbUrl").value.trim().replace(/\/$/,""));
