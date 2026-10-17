@@ -25,10 +25,22 @@ async function sync(){
   if(syncing){again=true;return;}
   syncing=true;setStat("同步中…");
   try{
-    // 1. 配置（syncCfg 定义在 profiles.js）：云端较新则覆盖本机并重绘
-    if(await syncCfg())render();
+    // 1. 同步配置 (settings 表，key='profiles')
+    const rCfg=await sbReq("settings?select=updated_at,value&key=eq.profiles");
+    const row=(await rCfg.json())[0];
+    const remoteTs=row?Number(row.updated_at)||0:0;
+    const localTs=+(localStorage.getItem("cfg_ts")||0);
+    if(row&&row.value&&remoteTs>localTs){
+      cfg=row.value;saveCfg();
+      localStorage.setItem("cfg_ts",remoteTs); // 覆盖 saveCfg 写入的“当前时间”，避免来回覆盖
+      render();
+    }else if(localTs>remoteTs){
+      await sbReq("settings?on_conflict=key",{method:"POST",
+        headers:{Prefer:"resolution=merge-duplicates,return=minimal"},
+        body:JSON.stringify({key:"profiles",value:cfg,updated_at:localTs})});
+    }
 
-    // 2. 记录
+    // 2. 同步记录 (logs 表)
     const hasBase=!!L("sb_synced");
     const synced=new Set(JSON.parse(L("sb_synced")||"[]"));
     const ids=new Set(log.map(e=>e.id));
@@ -42,7 +54,7 @@ async function sync(){
     for(let i=0;i<del.length;i+=100){
       await sbReq("logs?id=in.("+del.slice(i,i+100).map(encodeURIComponent).join(",")+")",{method:"DELETE"});
     }
-    const since=hasBase?Date.now()-62*864e5:0;   // 平时只拉最近62天，省流量
+    const since=hasBase?Date.now()-62*864e5:0;
     let all=[],from=0;
     while(true){
       const r=await sbReq(`logs?select=id,a,t,v,n&t=gte.${since}&order=t.asc,id.asc`,{headers:{Range:`${from}-${from+999}`}});
@@ -56,9 +68,9 @@ async function sync(){
     localStorage.setItem(KEY,JSON.stringify(log));
     const keepOld=old.filter(e=>synced.has(e.id)||addIds.has(e.id)).map(e=>e.id);
     localStorage.setItem("sb_synced",JSON.stringify([...keepOld,...remote]));
-    setStat("✅ 已同步 "+md(Date.now())+"（本机共 "+log.length+" 条）");
+    setStat("✅ 已同步 "+md(Date.now()));
     render();
-  }catch(err){setStat("⚠️ "+err.message+"（本地数据已保存，稍后自动重试）");}
+  }catch(err){setStat("⚠️ "+err.message);}
   syncing=false;
   if(again){again=false;sync();}
 }
