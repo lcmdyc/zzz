@@ -1,4 +1,5 @@
-/* ====== Supabase 云同步（增量记录 + 配置） ====== */
+/* ====== Supabase 云同步（增量记录 + 配置） ======
+   配置同步由 profiles.js 的 syncCfg() 负责（settings 表 key='profiles'）。 */
 const L=k=>localStorage.getItem(k)||"";
 let sess=JSON.parse(L("sb_sess")||"null"),syncing=false,again=false;
 const sbReady=()=>L("sb_url")&&L("sb_key")&&sess;
@@ -25,20 +26,8 @@ async function sync(){
   if(syncing){again=true;return;}
   syncing=true;setStat("同步中…");
   try{
-    // 1. 同步配置 (settings 表，key='profiles')
-    const rCfg=await sbReq("settings?select=updated_at,value&key=eq.profiles");
-    const row=(await rCfg.json())[0];
-    const remoteTs=row?Number(row.updated_at)||0:0;
-    const localTs=+(localStorage.getItem("cfg_ts")||0);
-    if(row&&row.value&&remoteTs>localTs){
-      cfg=row.value;saveCfg();
-      localStorage.setItem("cfg_ts",remoteTs); // 覆盖 saveCfg 写入的“当前时间”，避免来回覆盖
-      render();
-    }else if(localTs>remoteTs){
-      await sbReq("settings?on_conflict=key",{method:"POST",
-        headers:{Prefer:"resolution=merge-duplicates,return=minimal"},
-        body:JSON.stringify({key:"profiles",value:cfg,updated_at:localTs})});
-    }
+    // 1. 同步配置（profiles.js 里的 syncCfg：谁的时间新用谁）
+    await syncCfg();
 
     // 2. 同步记录 (logs 表)
     const hasBase=!!L("sb_synced");
